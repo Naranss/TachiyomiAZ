@@ -52,6 +52,8 @@ object PreferenceKeys {
 
     const val readWithTapping = "reader_tap"
 
+    const val tapZones = "reader_tap_zones"
+
     const val readWithTappingInverted = "reader_tap_inverted"
 
     const val readWithLongTap = "reader_long_tap"

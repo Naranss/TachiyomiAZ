@@ -133,6 +133,8 @@ class PreferencesHelper(val context: Context) : DownloadPreferences {
 
     fun readWithTapping() = flowPrefs.getBoolean(Keys.readWithTapping, true)
 
+    fun tapZones() = flowPrefs.getInt(Keys.tapZones, 0)
+
     fun readWithTappingInverted() = flowPrefs.getBoolean(Keys.readWithTappingInverted, false)
 
     fun readWithLongTap() = flowPrefs.getBoolean(Keys.readWithLongTap, true)

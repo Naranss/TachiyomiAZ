@@ -2,6 +2,8 @@ package eu.kanade.tachiyomi.ui.reader.viewer
 
 import com.tfcporciuncula.flow.Preference
 import eu.kanade.tachiyomi.data.preference.PreferencesHelper
+import eu.kanade.tachiyomi.ui.reader.viewer.navigation.TapZone
+import eu.kanade.tachiyomi.ui.reader.viewer.navigation.TapZones
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -19,6 +21,7 @@ abstract class ViewerConfig(preferences: PreferencesHelper) {
 
     var tappingEnabled = true
     var tappingInverted = false
+    var tapZones = 0
     var longTapEnabled = true
     var doubleTapAnimDuration = 500
     var volumeKeysEnabled = false
@@ -29,6 +32,9 @@ abstract class ViewerConfig(preferences: PreferencesHelper) {
     init {
         preferences.readWithTapping()
             .register({ tappingEnabled = it })
+
+        preferences.tapZones()
+            .register({ tapZones = it })
 
         preferences.readWithTappingInverted()
             .register({ tappingInverted = it })
@@ -50,6 +56,11 @@ abstract class ViewerConfig(preferences: PreferencesHelper) {
 
         preferences.alwaysShowChapterTransition()
             .register({ alwaysShowChapterTransition = it })
+    }
+
+    fun getTapZone(isPager: Boolean): TapZone? {
+        if (!tappingEnabled) return null
+        return TapZones.fromPreference(tapZones).getTapZone(isPager)
     }
 
     fun <T> Preference<T>.register(

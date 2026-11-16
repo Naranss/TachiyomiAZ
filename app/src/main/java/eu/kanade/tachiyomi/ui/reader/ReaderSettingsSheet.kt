@@ -82,6 +82,8 @@ class ReaderSettingsSheet(private val activity: ReaderActivity) : BottomSheetDia
         binding.longTap.bindToPreference(preferences.readWithLongTap())
         binding.alwaysShowChapterTransition.bindToPreference(preferences.alwaysShowChapterTransition())
         binding.autoWebtoonMode.bindToPreference(preferences.eh_useAutoWebtoon())
+        binding.tapZones.bindToIntPreference(preferences.tapZones(), R.array.tap_zones_values)
+        binding.invertTapping.bindToPreference(preferences.readWithTappingInverted())
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             binding.trueColor.visible()

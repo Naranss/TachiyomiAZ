@@ -1,0 +1,162 @@
+name: Android CI & Build
+
+on:
+  push:
+    branches:
+      - 'master'
+    paths:
+      - 'app/**'
+      - 'core-model/**'
+      - 'core-database/**'
+      - 'core-domain/**'
+      - 'buildSrc/**'
+      - 'gradle/**'
+      - 'gradlew'
+      - 'build.gradle.kts'
+      - 'settings.gradle.kts'
+      - 'gradle.properties'
+      - '.github/workflows/android.yml'
+  pull_request:
+    paths:
+      - 'app/**'
+      - 'core-model/**'
+      - 'core-database/**'
+      - 'core-domain/**'
+      - 'buildSrc/**'
+      - 'gradle/**'
+      - 'gradlew'
+      - 'build.gradle.kts'
+      - 'settings.gradle.kts'
+      - 'gradle.properties'
+      - '.github/workflows/android.yml'
+  workflow_dispatch:
+    inputs:
+      build_variant:
+        description: 'Build Variant (release or debug)'
+        required: true
+        default: 'release'
+        type: choice
+        options:
+          - release
+          - debug
+
+concurrency:
+  group: android-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Build Android APKs
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK
+        uses: actions/setup-java@v4
+        with:
+          java-version: 21
+          distribution: temurin
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Provide google-services.json
+        shell: bash
+        env:
+          GOOGLE_SERVICES_TEXT: ${{ secrets.GOOGLE_SERVICES_TEXT }}
+        run: |
+          if [ -n "$GOOGLE_SERVICES_TEXT" ]; then
+            echo "$GOOGLE_SERVICES_TEXT" > app/google-services.json
+          else
+            echo "Creating fallback mock google-services.json for build..."
+            cat << 'EOF' > app/google-services.json
+          {
+            "project_info": {
+              "project_number": "000000000000",
+              "project_id": "tachiyomi-az-build"
+            },
+            "client": [
+              {
+                "client_info": {
+                  "mobilesdk_app_id": "1:000000000000:android:0000000000000000000000",
+                  "android_client_info": {
+                    "package_name": "eu.kanade.tachiyomi.az"
+                  }
+                },
+                "api_key": [
+                  {
+                    "current_key": "dummy_api_key_for_ci"
+                  }
+                ]
+              }
+            ],
+            "configuration_version": "1"
+          }
+          EOF
+          fi
+
+      - name: Check shared modules portability
+        run: ./gradlew checkSharedPortability --no-daemon --console=plain
+
+      - name: Build APKs
+        shell: bash
+        run: |
+          VARIANT="${{ inputs.build_variant }}"
+          if [ "$VARIANT" = "debug" ]; then
+            echo "Building Debug APKs..."
+            ./gradlew assembleStandardApi21Debug assembleStandardApi26Debug --no-daemon --console=plain
+          else
+            echo "Building Release APKs..."
+            ./gradlew assembleStandardApi21Release assembleStandardApi26Release --no-daemon --console=plain
+          fi
+
+      - name: Setup Android SDK build-tools
+        if: ${{ env.SIGNING_KEY != '' }}
+        env:
+          SIGNING_KEY: ${{ secrets.SIGNING_KEY }}
+        run: |
+          ${ANDROID_SDK_ROOT}/cmdline-tools/latest/bin/sdkmanager "build-tools;29.0.3"
+
+      - name: Sign Android 5-7 (api21) release
+        if: ${{ env.SIGNING_KEY != '' && inputs.build_variant != 'debug' }}
+        id: sign_android5
+        uses: r0adkll/sign-android-release@v1
+        with:
+          releaseDirectory: app/build/outputs/apk/standardApi21/release
+          signingKeyBase64: ${{ secrets.SIGNING_KEY }}
+          alias: ${{ secrets.ALIAS }}
+          keyStorePassword: ${{ secrets.KEY_STORE_PASSWORD }}
+          keyPassword: ${{ secrets.KEY_PASSWORD }}
+
+      - name: Sign Android 8+ (api26) release
+        if: ${{ env.SIGNING_KEY != '' && inputs.build_variant != 'debug' }}
+        id: sign_android8
+        uses: r0adkll/sign-android-release@v1
+        with:
+          releaseDirectory: app/build/outputs/apk/standardApi26/release
+          signingKeyBase64: ${{ secrets.SIGNING_KEY }}
+          alias: ${{ secrets.ALIAS }}
+          keyStorePassword: ${{ secrets.KEY_STORE_PASSWORD }}
+          keyPassword: ${{ secrets.KEY_PASSWORD }}
+
+      - name: Upload Android 5-7 APK (minSdk 21)
+        uses: actions/upload-artifact@v4
+        with:
+          name: TachiyomiAZ-android5-${{ github.sha }}
+          path: |
+            ${{ steps.sign_android5.outputs.signedReleaseFile }}
+            app/build/outputs/apk/standardApi21/release/*.apk
+            app/build/outputs/apk/standardApi21/debug/*.apk
+          if-no-files-found: error
+
+      - name: Upload Android 8+ APK (minSdk 26)
+        uses: actions/upload-artifact@v4
+        with:
+          name: TachiyomiAZ-android8-${{ github.sha }}
+          path: |
+            ${{ steps.sign_android8.outputs.signedReleaseFile }}
+            app/build/outputs/apk/standardApi26/release/*.apk
+            app/build/outputs/apk/standardApi26/debug/*.apk
+          if-no-files-found: error

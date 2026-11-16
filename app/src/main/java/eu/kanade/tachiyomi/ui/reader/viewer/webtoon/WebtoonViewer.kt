@@ -13,6 +13,7 @@ import eu.kanade.tachiyomi.ui.reader.model.ChapterTransition
 import eu.kanade.tachiyomi.ui.reader.model.ReaderPage
 import eu.kanade.tachiyomi.ui.reader.model.ViewerChapters
 import eu.kanade.tachiyomi.ui.reader.viewer.BaseViewer
+import eu.kanade.tachiyomi.ui.reader.viewer.navigation.TapZoneRegion
 import eu.kanade.tachiyomi.util.view.gone
 import eu.kanade.tachiyomi.util.view.visible
 import kotlinx.coroutines.CoroutineScope
@@ -116,20 +117,22 @@ class WebtoonViewer(
             }
         )
         recycler.tapListener = { event ->
-            val positionX = event.rawX
-            val positionY = event.rawY
-            val inverted = config.tappingInverted
-            when {
-                positionY < frame.height * 0.33 && config.tappingEnabled ->
-                    if (inverted) scrollDown() else scrollUp()
-                positionY > frame.height * 0.66 && config.tappingEnabled ->
-                    if (inverted) scrollUp() else scrollDown()
-                // Reading right to left, the left side of the screen moves forward
-                positionX < frame.width * 0.33 && config.tappingEnabled ->
-                    if (inverted != isReversed) scrollDown() else scrollUp()
-                positionX > frame.width * 0.66 && config.tappingEnabled ->
-                    if (inverted != isReversed) scrollUp() else scrollDown()
-                else -> activity.toggleMenu()
+            val tapZone = config.getTapZone(isPager = false)
+            if (tapZone != null && frame.width > 0 && frame.height > 0) {
+                val rx = event.x / frame.width.toFloat()
+                val ry = event.y / frame.height.toFloat()
+                val region = tapZone.getRegion(rx, ry)
+                if (region != null) {
+                    val inverted = config.tappingInverted
+                    when (region.type) {
+                        TapZoneRegion.RegionType.LEFT -> if (inverted) scrollDown() else scrollUp()
+                        TapZoneRegion.RegionType.RIGHT -> if (inverted) scrollUp() else scrollDown()
+                    }
+                } else {
+                    activity.toggleMenu()
+                }
+            } else {
+                activity.toggleMenu()
             }
         }
         recycler.longTapListener = f@{ event ->

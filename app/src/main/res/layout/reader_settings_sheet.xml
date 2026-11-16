@@ -181,11 +181,39 @@
         android:textColor="?android:attr/textColorSecondary"
         app:layout_constraintTop_toBottomOf="@id/always_show_chapter_transition" />
 
+    <TextView
+        android:id="@+id/tap_zones_text"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:text="@string/pref_tap_zones"
+        app:layout_constraintBaseline_toBaselineOf="@id/tap_zones"
+        app:layout_constraintEnd_toStartOf="@id/verticalcenter"
+        app:layout_constraintStart_toStartOf="parent" />
+
+    <androidx.appcompat.widget.AppCompatSpinner
+        android:id="@+id/tap_zones"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="20dp"
+        android:entries="@array/tap_zones_selector"
+        app:layout_constraintEnd_toEndOf="@id/spinner_end"
+        app:layout_constraintStart_toEndOf="@id/verticalcenter"
+        app:layout_constraintTop_toBottomOf="@id/auto_webtoon_mode" />
+
+    <com.google.android.material.switchmaterial.SwitchMaterial
+        android:id="@+id/invert_tapping"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="10dp"
+        android:text="@string/pref_read_with_tapping_inverted"
+        android:textColor="?android:attr/textColorSecondary"
+        app:layout_constraintTop_toBottomOf="@id/tap_zones" />
+
     <android.widget.Space
         android:id="@+id/end_general_preferences"
         android:layout_width="0dp"
         android:layout_height="0dp"
-        app:layout_constraintBottom_toBottomOf="@id/auto_webtoon_mode" />
+        app:layout_constraintBottom_toBottomOf="@id/invert_tapping" />
 
     <!-- Pager preferences -->
 

@@ -332,6 +332,22 @@ class SettingsReaderController : SettingsController() {
                     titleRes = R.string.pref_read_with_tapping
                     defaultValue = true
                 }
+                intListPreference {
+                    key = Keys.tapZones
+                    titleRes = R.string.pref_tap_zones
+                    entriesRes =
+                        arrayOf(
+                            R.string.tap_zones_auto,
+                            R.string.tap_zones_left_right,
+                            R.string.tap_zones_l_shaped,
+                            R.string.tap_zones_kindle,
+                            R.string.tap_zones_edge,
+                            R.string.tap_zones_disabled
+                        )
+                    entryValues = arrayOf("0", "1", "2", "3", "4", "5")
+                    defaultValue = "0"
+                    summary = "%s"
+                }.apply { dependency = Keys.readWithTapping }
                 switchPreference {
                     key = Keys.readWithTappingInverted
                     titleRes = R.string.pref_read_with_tapping_inverted

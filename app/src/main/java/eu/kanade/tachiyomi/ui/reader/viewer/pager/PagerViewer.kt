@@ -13,6 +13,7 @@ import eu.kanade.tachiyomi.ui.reader.model.ChapterTransition
 import eu.kanade.tachiyomi.ui.reader.model.ReaderPage
 import eu.kanade.tachiyomi.ui.reader.model.ViewerChapters
 import eu.kanade.tachiyomi.ui.reader.viewer.BaseViewer
+import eu.kanade.tachiyomi.ui.reader.viewer.navigation.TapZoneRegion
 import eu.kanade.tachiyomi.util.view.gone
 import eu.kanade.tachiyomi.util.view.visible
 import timber.log.Timber
@@ -83,19 +84,29 @@ abstract class PagerViewer(val activity: ReaderActivity) : BaseViewer {
             }
         )
         pager.tapListener = { event ->
-            val positionX = event.x
-            val positionY = event.y
-            val inverted = config.tappingInverted
-            when {
-                positionY < pager.height * 0.33f && config.tappingEnabled && !pager.isHorizontal ->
-                    if (inverted) moveDown() else moveUp()
-                positionY > pager.height * 0.66f && config.tappingEnabled && !pager.isHorizontal ->
-                    if (inverted) moveUp() else moveDown()
-                positionX < pager.width * 0.33f && config.tappingEnabled ->
-                    if (inverted) moveRight() else moveLeft()
-                positionX > pager.width * 0.66f && config.tappingEnabled ->
-                    if (inverted) moveLeft() else moveRight()
-                else -> activity.toggleMenu()
+            val tapZone = config.getTapZone(isPager = true)
+            if (tapZone != null && pager.width > 0 && pager.height > 0) {
+                val rx = event.x / pager.width.toFloat()
+                val ry = event.y / pager.height.toFloat()
+                val region = tapZone.getRegion(rx, ry)
+                if (region != null) {
+                    val inverted = config.tappingInverted
+                    if (pager.isHorizontal) {
+                        when (region.type) {
+                            TapZoneRegion.RegionType.LEFT -> if (inverted) moveRight() else moveLeft()
+                            TapZoneRegion.RegionType.RIGHT -> if (inverted) moveLeft() else moveRight()
+                        }
+                    } else {
+                        when (region.type) {
+                            TapZoneRegion.RegionType.LEFT -> if (inverted) moveDown() else moveUp()
+                            TapZoneRegion.RegionType.RIGHT -> if (inverted) moveUp() else moveDown()
+                        }
+                    }
+                } else {
+                    activity.toggleMenu()
+                }
+            } else {
+                activity.toggleMenu()
             }
         }
         pager.longTapListener = f@{
