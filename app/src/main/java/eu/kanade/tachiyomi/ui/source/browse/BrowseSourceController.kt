@@ -197,6 +197,12 @@ open class BrowseSourceController(bundle: Bundle) :
         // Inflate and prepare drawer
         val navView = drawer.inflate(R.layout.source_drawer) as SourceFilterSheet // TODO whatever this is
         this.navView = navView
+        if (presenter.sourceFilters.any { it is Filter.Group<*> && it.state.isEmpty() }) {
+            val newFilters = presenter.source.getFilterList()
+            if (newFilters != presenter.sourceFilters) {
+                presenter.sourceFilters = newFilters
+            }
+        }
         navView.setFilters(presenter.filterItems)
 
         val activity = activity as MainActivity?
@@ -438,7 +444,18 @@ open class BrowseSourceController(bundle: Bundle) :
             R.id.action_compact_grid -> setDisplayMode(DisplayMode.COMPACT_GRID)
             R.id.action_comfortable_grid -> setDisplayMode(DisplayMode.COMFORTABLE_GRID)
             R.id.action_list -> setDisplayMode(DisplayMode.LIST)
-            R.id.action_set_filter -> navView?.let { (activity as MainActivity?)?.binding?.drawer?.openDrawer(GravityCompat.END) }
+            R.id.action_set_filter -> {
+                navView?.let { sheet ->
+                    if (presenter.sourceFilters.any { it is Filter.Group<*> && it.state.isEmpty() }) {
+                        val newFilters = presenter.source.getFilterList()
+                        if (newFilters != presenter.sourceFilters) {
+                            presenter.sourceFilters = newFilters
+                            sheet.setFilters(presenter.filterItems)
+                        }
+                    }
+                    (activity as MainActivity?)?.binding?.drawer?.openDrawer(GravityCompat.END)
+                }
+            }
             R.id.action_open_in_web_view -> openInWebView()
             R.id.action_local_source_help -> openLocalSourceHelpGuide()
         }

@@ -68,6 +68,7 @@ constructor(context: Context, attrs: AttributeSet? = null) :
     }
 
     fun setFilters(items: List<IFlexible<*>>) {
+        adapter.clear()
         adapter.updateDataSet(items)
     }
 

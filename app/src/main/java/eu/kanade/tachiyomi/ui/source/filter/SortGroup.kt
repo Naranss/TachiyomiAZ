@@ -1,6 +1,7 @@
 package eu.kanade.tachiyomi.ui.source.filter
 
 import android.view.View
+import androidx.recyclerview.widget.RecyclerView
 import eu.davidea.flexibleadapter.FlexibleAdapter
 import eu.davidea.flexibleadapter.items.AbstractExpandableHeaderItem
 import eu.davidea.flexibleadapter.items.IFlexible
@@ -45,7 +46,24 @@ class SortGroup(val filter: Filter.Sort) : AbstractExpandableHeaderItem<SortGrou
             }
         )
 
-        holder.itemView.setOnClickListener(holder)
+        holder.itemView.setOnClickListener {
+            val currentPos = holder.bindingAdapterPosition.takeIf { it != RecyclerView.NO_POSITION }
+                ?: position
+
+            if (isExpanded) {
+                adapter.collapse(currentPos)
+            } else {
+                adapter.expand(currentPos)
+            }
+
+            holder.icon.setVectorCompat(
+                if (isExpanded) {
+                    R.drawable.ic_expand_more_white_24dp
+                } else {
+                    R.drawable.ic_chevron_right_white_24dp
+                }
+            )
+        }
     }
 
     override fun equals(other: Any?): Boolean {
@@ -60,3 +78,4 @@ class SortGroup(val filter: Filter.Sort) : AbstractExpandableHeaderItem<SortGrou
 
     class Holder(view: View, adapter: FlexibleAdapter<*>) : GroupItem.Holder(view, adapter)
 }
+

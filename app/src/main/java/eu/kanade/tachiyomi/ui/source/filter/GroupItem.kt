@@ -3,6 +3,7 @@ package eu.kanade.tachiyomi.ui.source.filter
 import android.view.View
 import android.widget.ImageView
 import android.widget.TextView
+import androidx.recyclerview.widget.RecyclerView
 import eu.davidea.flexibleadapter.FlexibleAdapter
 import eu.davidea.flexibleadapter.items.AbstractExpandableHeaderItem
 import eu.davidea.flexibleadapter.items.IFlexible
@@ -37,6 +38,22 @@ class GroupItem(val filter: Filter.Group<*>) : AbstractExpandableHeaderItem<Grou
         return Holder(view, adapter)
     }
 
+    fun syncSubItems() {
+        if (subItems == null || subItems.size != filter.state.size) {
+            val newSubItems = filter.state.mapNotNull {
+                when (it) {
+                    is Filter.CheckBox -> CheckboxSectionItem(it)
+                    is Filter.TriState -> TriStateSectionItem(it)
+                    is Filter.Text -> TextSectionItem(it)
+                    is Filter.Select<*> -> SelectSectionItem(it)
+                    else -> null
+                }
+            }
+            newSubItems.forEach { it.header = this }
+            this.subItems = newSubItems
+        }
+    }
+
     override fun bindViewHolder(
         adapter: FlexibleAdapter<IFlexible<androidx.recyclerview.widget.RecyclerView.ViewHolder>>,
         holder: Holder,
@@ -53,7 +70,26 @@ class GroupItem(val filter: Filter.Group<*>) : AbstractExpandableHeaderItem<Grou
             }
         )
 
-        holder.itemView.setOnClickListener(holder)
+        holder.itemView.setOnClickListener {
+            syncSubItems()
+
+            val currentPos = holder.bindingAdapterPosition.takeIf { it != RecyclerView.NO_POSITION }
+                ?: position
+
+            if (isExpanded) {
+                adapter.collapse(currentPos)
+            } else {
+                adapter.expand(currentPos)
+            }
+
+            holder.icon.setVectorCompat(
+                if (isExpanded) {
+                    R.drawable.ic_expand_more_white_24dp
+                } else {
+                    R.drawable.ic_chevron_right_white_24dp
+                }
+            )
+        }
     }
 
     override fun equals(other: Any?): Boolean {
@@ -66,12 +102,13 @@ class GroupItem(val filter: Filter.Group<*>) : AbstractExpandableHeaderItem<Grou
         return filter.hashCode()
     }
 
-    open class Holder(view: View, adapter: FlexibleAdapter<*>) : ExpandableViewHolder(view, adapter, true) {
+    open class Holder(view: View, adapter: FlexibleAdapter<*>) : ExpandableViewHolder(view, adapter, false) {
         val title: TextView = itemView.findViewById(R.id.title)
         val icon: ImageView = itemView.findViewById(R.id.expand_icon)
 
         override fun shouldNotifyParentOnClick(): Boolean {
-            return true
+            return false
         }
     }
 }
+
