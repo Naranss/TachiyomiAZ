@@ -36,15 +36,40 @@ jobs:
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@f29f5a9d7b09a7c6b29859002d29d24e1674c884 # v5.0.1
 
-      - name: Write google-services.json
-        uses: DamianReeves/write-file-action@v1.3
-        with:
-          # The path to the file to write
-          path: app/google-services.json
-          # The contents of the file
-          contents: ${{ secrets.GOOGLE_SERVICES_TEXT }}
-          # The mode of writing to use: `overwrite`, `append`, or `preserve`.
-          write-mode: overwrite # optional, default is preserve
+      - name: Provide google-services.json
+        shell: bash
+        env:
+          GOOGLE_SERVICES_TEXT: ${{ secrets.GOOGLE_SERVICES_TEXT }}
+        run: |
+          if [ -n "$GOOGLE_SERVICES_TEXT" ]; then
+            echo "$GOOGLE_SERVICES_TEXT" > app/google-services.json
+          else
+            echo "Creating fallback mock google-services.json for build..."
+            cat << 'EOF' > app/google-services.json
+          {
+            "project_info": {
+              "project_number": "000000000000",
+              "project_id": "tachiyomi-az-build"
+            },
+            "client": [
+              {
+                "client_info": {
+                  "mobilesdk_app_id": "1:000000000000:android:0000000000000000000000",
+                  "android_client_info": {
+                    "package_name": "eu.kanade.tachiyomi.az"
+                  }
+                },
+                "api_key": [
+                  {
+                    "current_key": "dummy_api_key_for_ci"
+                  }
+                ]
+              }
+            ],
+            "configuration_version": "1"
+          }
+          EOF
+          fi
 
       # Guards the code shared with the iOS port. commonMain must not touch the Android SDK,
       # and iOS targets only compile on macOS -- so building the shared modules for plain JVM is
@@ -52,23 +77,25 @@ jobs:
       # which cover the rules both platforms have to agree on. Runs before the APKs so a
       # portability break fails fast rather than after a full release build.
       - name: Check shared modules
-        uses: gradle/gradle-command-action@v2
-        with:
-          arguments: checkSharedPortability
+        run: ./gradlew checkSharedPortability --no-daemon --console=plain
 
       # Builds both API-level variants from the same code:
       #   standardApi21Release -> Android 5-7 (minSdk 21)
       #   standardApi26Release -> Android 8+  (minSdk 26)
       - name: Build APKs
-        uses: gradle/gradle-command-action@v2
-        with:
-          arguments: assembleStandardApi21Release assembleStandardApi26Release
+        run: ./gradlew assembleStandardApi21Release assembleStandardApi26Release --no-daemon --console=plain
 
       - name: Setup Android SDK
+        if: ${{ env.SIGNING_KEY != '' }}
+        env:
+          SIGNING_KEY: ${{ secrets.SIGNING_KEY }}
         run: |
           ${ANDROID_SDK_ROOT}/cmdline-tools/latest/bin/sdkmanager "build-tools;29.0.3"
 
       - name: Sign Android 5-7 (api21) release
+        if: ${{ env.SIGNING_KEY != '' }}
+        env:
+          SIGNING_KEY: ${{ secrets.SIGNING_KEY }}
         id: sign_android5
         uses: r0adkll/sign-android-release@v1
         with:
@@ -79,6 +106,9 @@ jobs:
           keyPassword: ${{ secrets.KEY_PASSWORD }}
 
       - name: Sign Android 8+ (api26) release
+        if: ${{ env.SIGNING_KEY != '' }}
+        env:
+          SIGNING_KEY: ${{ secrets.SIGNING_KEY }}
         id: sign_android8
         uses: r0adkll/sign-android-release@v1
         with:
@@ -92,10 +122,16 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: TachiyomiAZ-android5-${{ github.sha }}
-          path: ${{ steps.sign_android5.outputs.signedReleaseFile }}
+          path: |
+            ${{ steps.sign_android5.outputs.signedReleaseFile }}
+            app/build/outputs/apk/standardApi21/release/*.apk
+          if-no-files-found: error
 
       - name: Upload Android 8+ APK (minSdk 26)
         uses: actions/upload-artifact@v4
         with:
           name: TachiyomiAZ-android8-${{ github.sha }}
-          path: ${{ steps.sign_android8.outputs.signedReleaseFile }}
+          path: |
+            ${{ steps.sign_android8.outputs.signedReleaseFile }}
+            app/build/outputs/apk/standardApi26/release/*.apk
+          if-no-files-found: error

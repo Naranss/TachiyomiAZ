@@ -1,34 +1,6 @@
-name: Android CI & Build
+name: Android CI & Build (Manual Dispatch)
 
 on:
-  push:
-    branches:
-      - 'master'
-    paths:
-      - 'app/**'
-      - 'core-model/**'
-      - 'core-database/**'
-      - 'core-domain/**'
-      - 'buildSrc/**'
-      - 'gradle/**'
-      - 'gradlew'
-      - 'build.gradle.kts'
-      - 'settings.gradle.kts'
-      - 'gradle.properties'
-      - '.github/workflows/android.yml'
-  pull_request:
-    paths:
-      - 'app/**'
-      - 'core-model/**'
-      - 'core-database/**'
-      - 'core-domain/**'
-      - 'buildSrc/**'
-      - 'gradle/**'
-      - 'gradlew'
-      - 'build.gradle.kts'
-      - 'settings.gradle.kts'
-      - 'gradle.properties'
-      - '.github/workflows/android.yml'
   workflow_dispatch:
     inputs:
       build_variant:
